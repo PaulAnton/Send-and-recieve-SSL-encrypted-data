@@ -1,0 +1,31 @@
+Syslog server:172.31.100.100
+syslog port:514
+
+
+1) Create self signed certificates:
+openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout /Viking/syslog/etc/ssl/selfsignedkey.key -out /Viking/syslog/etc/ssl/selfsignedcert.crt
+
+2) Make sure ncat is installed:
+- You can install ncat by installing nmap
+
+3) Add the certificate you want to use to the ncat usr share folder:
+cat /Viking/syslog/etc/ssl/selfsignedcert.crt /Viking/syslog/etc/ssl/selfsignedkey.key >/usr/share/ncat/ca-bundle.crt
+
+
+
+4) Add the following to syslog.conf and restart the syslog service:
+source s_tls {
+    network(ip(0.0.0.0) port(514) max-connections(50)
+        transport("tls")
+               tls( key-file("/Viking/syslog/etc/ssl/selfsignedkey.key")
+               cert-file("/Viking/syslog/etc/ssl/selfsignedcert.crt")
+               ca-dir("/Viking/syslog/etc/ssl")
+               peer-verify(optional-untrusted)
+        )
+    );
+};
+
+
+
+5) Send data to syslog using the following sample code:
+while :; do echo "<150>`env LANG=us_US.UTF-8 date "+%b %d %H:%M:%S"` host`date +%s` service: <any data in here> SSL_Encrypted_data";sleep 1; done|ncat --ssl 172.31.100.100 514 -vvvv
